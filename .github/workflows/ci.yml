@@ -62,6 +62,9 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+        with:
+          # El plan gratuito solo permite consultar el Quality Gate de main
+          args: ${{ github.ref == 'refs/heads/main' && '-Dsonar.qualitygate.wait=true' || '' }}
 
       # 5. Release: imagen Docker
       - name: Build Docker image
