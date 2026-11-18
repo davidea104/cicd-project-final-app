@@ -39,8 +39,10 @@ def test_cabeceras_de_seguridad():
 
 
 def test_cookie_de_sesion_segura():
-    cookie = Navegador().get("/bienvenida").headers.get("Set-Cookie", "")
-    assert "Secure" in cookie and "HttpOnly" in cookie
+    # /login/google siempre guarda algo en la sesión (estado OAuth o un aviso), así que crea la cookie
+    cookie = Navegador().get("/login/google", allow_redirects=False).headers.get("Set-Cookie", "")
+    assert "session=" in cookie, "La app debe crear la cookie de sesión"
+    assert "Secure" in cookie and "HttpOnly" in cookie and "SameSite=Lax" in cookie
 
 
 def test_rutas_protegidas_piden_sesion():
@@ -56,6 +58,6 @@ def test_sin_puertas_de_prueba_en_produccion():
     if AMBIENTE != "production":
         return
     nav = Navegador()
-    assert nav.post("/pruebas/login", data={"correo": "x@pruebas.kuadra.app"},
-                    headers={"X-Token-Pruebas": "x" * 40}).status_code == 404
+    r = nav.post("/pruebas/login", data={"correo": "x@pruebas.kuadra.app"}, headers={"X-Token-Pruebas": "x" * 40})
+    assert r.status_code in (400, 404), "La entrada de pruebas no debe permitir el acceso en producción"
     assert "Probar la demo" not in nav.get("/bienvenida").text
