@@ -251,7 +251,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--lavanda); b
 @media (min-width: 1100px) {
   .layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; min-height: 100vh; }
   .panel-asesor, .panel-asesor:target {
-    display: flex; position: sticky; top: 0; height: 100vh; inset: auto;
+    display: flex; position: sticky; inset: 0 auto auto auto; height: 100vh;
     border-left: 1px solid var(--borde); z-index: 5;
   }
   .solo-movil { display: none !important; }
