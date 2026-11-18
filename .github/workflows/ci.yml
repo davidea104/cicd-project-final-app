@@ -232,7 +232,8 @@ jobs:
           python-version: '3.13'
 
       - name: Instalar dependencias de prueba
-        run: pip install --require-hashes --only-binary=:all: -r requirements.txt -r requirements-dev.txt
+        run: |
+          pip install --require-hashes --only-binary=:all: -r requirements.txt -r requirements-dev.txt
 
       - name: Esperar la versión nueva
         run: |
