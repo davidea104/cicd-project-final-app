@@ -86,12 +86,18 @@ def validar_gasto_compartido(gasto: GastoCompartido) -> GastoCompartido:
         raise DatoInvalido("Hay personas repetidas en la división.")
     return gasto
 
-CORREO_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+def _correo_valido(correo: str) -> bool:
+    """Validación lineal (sin expresiones regulares con backtracking)."""
+    if len(correo) > 254 or any(c.isspace() for c in correo) or correo.count("@") != 1:
+        return False
+    usuario, dominio = correo.split("@")
+    partes = dominio.split(".")
+    return bool(usuario) and len(partes) >= 2 and all(partes)
 
 
 def normalizar_correo(correo: str) -> str:
     correo = correo.strip().lower()
-    if len(correo) > 254 or not CORREO_RE.match(correo):
+    if not _correo_valido(correo):
         raise DatoInvalido(f"Correo no válido: {correo or '(vacío)'}")
     return correo
 

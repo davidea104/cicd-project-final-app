@@ -189,6 +189,31 @@ def google_callback():
     return redirect(url_for("kuadra.inicio"))
 
 
+DOMINIO_PRUEBAS = "@pruebas.kuadra.app"
+
+
+@bp.post("/pruebas/login")
+def login_pruebas():
+    """Entrada SOLO para pruebas automáticas en staging (Google no permite automatizar su login).
+
+    Exige: ambiente staging, un token secreto (cabecera X-Token-Pruebas) y un correo @pruebas.kuadra.app.
+    En cualquier otro caso responde 404, como si la ruta no existiera.
+    """
+    token = current_app.config["TOKEN_PRUEBAS"]
+    recibido = request.headers.get("X-Token-Pruebas", "")
+    correo = (request.form.get("correo") or "").strip().lower()
+    if (
+        current_app.config["AMBIENTE"] != "staging"
+        or len(token) < 32
+        or not secrets.compare_digest(token, recibido)
+        or not correo.endswith(DOMINIO_PRUEBAS)
+    ):
+        abort(404)
+    session.clear()
+    session["usuario"] = d.normalizar_correo(correo)
+    return {"ok": True, "usuario": session["usuario"]}
+
+
 @bp.route("/registro", methods=["GET", "POST"])
 def registro():
     if "usuario" not in session:

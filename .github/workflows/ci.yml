@@ -1,4 +1,10 @@
-name: CI
+# CI/CD de Kuadra
+#
+#   PR a develop/main ─► CI (checkout, build, estáticas, unitarias + cobertura, release de la imagen)
+#   push develop      ─► CI ─► IaC + deploy STAGING ─► pruebas PRE-PROD ─► rollback automático si fallan
+#   push main         ─► CI ─► aprobación ─► IaC + deploy PRODUCCIÓN ─► pruebas POST-PROD ─► rollback si fallan
+#   Botón de pánico   ─► workflow "Rollback (botón de pánico)"
+name: CI/CD
 
 on:
   push:
@@ -12,8 +18,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: cicd-${{ github.ref }}
+  cancel-in-progress: false  # nunca cortar un despliegue a la mitad
+
+env:
+  AWS_REGION: us-east-1
+  TF_VERSION: '1.17.1'
+  IMAGE_REPO: ${{ vars.DOCKERHUB_USERNAME }}/kuadra
 
 jobs:
   build-and-test:  # Nombre usado por la protección de ramas
@@ -26,20 +37,19 @@ jobs:
     steps:
       # 1. Checkout
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
         with:
           fetch-depth: 0
 
       # 2. Build
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7
         with:
           python-version: '3.13'
 
       - name: Install dependencies (con hashes)
         run: |
-          python -m pip install --upgrade pip
-          pip install --require-hashes -r requirements.txt -r requirements-dev.txt
+          pip install --require-hashes --only-binary=:all: -r requirements.txt -r requirements-dev.txt
 
       # 3. Pruebas estáticas
       - name: Lint (ruff)
@@ -52,16 +62,25 @@ jobs:
       - name: Dependency audit (pip-audit)
         run: pip-audit --strict -r requirements.txt
 
+      - name: IaC estático (terraform fmt + validate)
+        run: |
+          curl -sSLo tf.zip https://releases.hashicorp.com/terraform/1.17.1/terraform_1.17.1_linux_amd64.zip
+          unzip -q tf.zip -d /tmp/tf && rm tf.zip
+          cd infra && /tmp/tf/terraform fmt -check -recursive && /tmp/tf/terraform init -backend=false -input=false >/dev/null && /tmp/tf/terraform validate
+
       # 4. Pruebas unitarias, de integración y cobertura
       - name: Unit + integration tests with coverage
         run: pytest
 
       - name: SonarCloud Scan
         if: env.SONAR_TOKEN != ''
-        uses: SonarSource/sonarqube-scan-action@v8
+        uses: SonarSource/sonarqube-scan-action@59202af334b4ba7b5db01b701b8e79f8b3bef0f4  # v8
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+        with:
+          # El plan gratuito solo permite consultar el Quality Gate de main
+          args: ${{ github.ref == 'refs/heads/main' && '-Dsonar.qualitygate.wait=true' || '' }}
 
       # 5. Release: imagen Docker
       - name: Build Docker image
@@ -84,14 +103,14 @@ jobs:
 
       - name: Upload reports
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7
         with:
           name: reportes
           path: coverage.xml
 
       - name: Login to Docker Hub
         if: github.event_name == 'push'
-        uses: docker/login-action@v4
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550  # v4
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -102,3 +121,201 @@ jobs:
         run: |
           docker push "$IMAGE_NAME:${{ github.sha }}"
           echo "image_uri=$IMAGE_NAME:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+  # ---------------------------------------------------------------------------
+  # 0. Decide el ambiente según la rama
+  # ---------------------------------------------------------------------------
+  preparar:
+    needs: build-and-test
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      ambiente: ${{ steps.amb.outputs.ambiente }}
+    steps:
+      - id: amb
+        run: |
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "ambiente=production" >> "$GITHUB_OUTPUT"
+          else
+            echo "ambiente=staging" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Rama ${{ github.ref_name }} → ambiente $(tail -1 "$GITHUB_OUTPUT")"
+
+  # ---------------------------------------------------------------------------
+  # 1. IaC + Deploy (infraestructura y app) en el ambiente
+  # ---------------------------------------------------------------------------
+  desplegar:
+    needs: preparar
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-${{ needs.preparar.outputs.ambiente }}
+      cancel-in-progress: false  # nunca cortar un terraform apply a la mitad
+    environment:
+      name: ${{ needs.preparar.outputs.ambiente }}  # production exige aprobación manual
+      url: ${{ steps.salidas.outputs.app_url }}
+    outputs:
+      app_url: ${{ steps.salidas.outputs.app_url }}
+      imagen_anterior: ${{ steps.anterior.outputs.imagen }}
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd  # v6
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e  # v4
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Guardar la versión actual (para rollback)
+        id: anterior
+        env:
+          AMB: ${{ needs.preparar.outputs.ambiente }}
+        run: |
+          td=$(aws ecs describe-services --cluster "kuadra-$AMB-cluster" --services "kuadra-$AMB-service" \
+               --query 'services[0].taskDefinition' --output text 2>/dev/null || true)
+          img=""
+          if [ -n "$td" ] && [ "$td" != "None" ]; then
+            img=$(aws ecs describe-task-definition --task-definition "$td" \
+                  --query 'taskDefinition.containerDefinitions[0].image' --output text)
+          fi
+          echo "Versión actual en $AMB: ${img:-ninguna (primer despliegue)}"
+          echo "imagen=$img" >> "$GITHUB_OUTPUT"
+
+      - name: Terraform Init
+        run: |
+          terraform init -input=false -backend-config=backend.hcl
+          terraform workspace select -or-create "${{ needs.preparar.outputs.ambiente }}"
+
+      - name: Terraform Apply (IaC + deploy de la app)
+        env:
+          TF_VAR_environment_name: ${{ needs.preparar.outputs.ambiente }}
+          TF_VAR_docker_image_uri: ${{ env.IMAGE_REPO }}:${{ github.sha }}
+          TF_VAR_app_version: ${{ github.sha }}
+          TF_VAR_gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          TF_VAR_google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
+          TF_VAR_google_client_secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          TF_VAR_token_pruebas: ${{ secrets.TOKEN_PRUEBAS }}
+        run: terraform apply -auto-approve -input=false
+
+      - name: Salidas
+        id: salidas
+        run: |
+          echo "app_url=$(terraform output -raw app_url)" >> "$GITHUB_OUTPUT"
+          echo "### Desplegado en ${{ needs.preparar.outputs.ambiente }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- URL: $(terraform output -raw app_url)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Versión: \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------------
+  # 2. Pruebas del ambiente: PRE-PROD (staging) o POST-PROD (producción)
+  # ---------------------------------------------------------------------------
+  probar:
+    needs: [preparar, desplegar]
+    runs-on: ubuntu-latest
+    env:
+      APP_BASE_URL: ${{ needs.desplegar.outputs.app_url }}
+      EXPECTED_VERSION: ${{ github.sha }}
+      EXPECTED_ENV: ${{ needs.preparar.outputs.ambiente }}
+      TOKEN_PRUEBAS: ${{ needs.preparar.outputs.ambiente == 'staging' && secrets.TOKEN_PRUEBAS || '' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7
+        with:
+          python-version: '3.13'
+
+      - name: Instalar dependencias de prueba
+        run: |
+          pip install --require-hashes --only-binary=:all: -r requirements.txt -r requirements-dev.txt
+
+      - name: Esperar la versión nueva
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf "$APP_BASE_URL/health" | grep -q "$EXPECTED_VERSION"; then
+              echo "Versión $EXPECTED_VERSION arriba en $EXPECTED_ENV"; exit 0
+            fi
+            echo "Intento $i: esperando 10 s..."; sleep 10
+          done
+          echo "La versión nueva no respondió a tiempo"; exit 1
+
+      - name: Smoke tests
+        run: pytest e2e/test_smoke.py --no-cov -v --junitxml=smoke.xml
+
+      - name: Pruebas de aceptación PRE-PROD (solo staging)
+        if: needs.preparar.outputs.ambiente == 'staging'
+        run: pytest e2e/test_aceptacion_staging.py e2e/test_ui_selenium.py --no-cov -v --junitxml=aceptacion.xml
+
+      - name: Subir reportes
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7
+        with:
+          name: pruebas-${{ needs.preparar.outputs.ambiente }}
+          path: '*.xml'
+
+  # ---------------------------------------------------------------------------
+  # 3. Rollback automático si fallan las pruebas del ambiente
+  # ---------------------------------------------------------------------------
+  rollback:
+    needs: [preparar, desplegar, probar]
+    if: failure() && needs.desplegar.result == 'success' && needs.desplegar.outputs.imagen_anterior != ''
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-${{ needs.preparar.outputs.ambiente }}
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: infra
+    env:
+      AMB: ${{ needs.preparar.outputs.ambiente }}
+      IMAGEN: ${{ needs.desplegar.outputs.imagen_anterior }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
+
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd  # v6
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e  # v4
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Volver a la versión anterior
+        env:
+          TF_VAR_environment_name: ${{ env.AMB }}
+          TF_VAR_docker_image_uri: ${{ env.IMAGEN }}
+          TF_VAR_gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          TF_VAR_google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
+          TF_VAR_google_client_secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          TF_VAR_token_pruebas: ${{ secrets.TOKEN_PRUEBAS }}
+        run: |
+          export TF_VAR_app_version="${IMAGEN##*:}"
+          echo "⚠️ Rollback de $AMB a $IMAGEN"
+          terraform init -input=false -backend-config=backend.hcl
+          terraform workspace select "$AMB"
+          terraform apply -auto-approve -input=false
+          echo "### ⚠️ Rollback automático en $AMB a \`$IMAGEN\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verificar la versión restaurada
+        run: |
+          url=$(terraform output -raw app_url)
+          for i in $(seq 1 30); do
+            if curl -sf "$url/health" | grep -q "${IMAGEN##*:}"; then echo "Rollback verificado"; exit 0; fi
+            sleep 10
+          done
+          exit 1
+
+      - name: Marcar el pipeline como fallido
+        run: |
+          echo "El despliegue de ${{ github.sha }} falló sus pruebas y se revirtió."
+          exit 1
