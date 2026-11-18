@@ -42,15 +42,22 @@
   </svg>
 </section>
 
+{% if deudas %}
 <section class="tarjeta a-deudas" id="deudas">
-  <h2>¿Qué deuda pagar primero?</h2>
+  <div class="cabecera"><h2>¿Qué deuda pagar primero?</h2><a class="chip contorno pequeno" href="{{ url_for('kuadra.finanzas') }}">Editar</a></div>
   <ul class="lista">
     {% for deuda in deudas %}
     <li><div><strong>{{ loop.index }}. {{ deuda.nombre }}</strong><br><span class="suave">{{ deuda.tasa_ea }}% E.A. · cuota {{ deuda.cuota|pesos }}</span></div><span>{{ deuda.saldo|pesos }}</span></li>
-    {% else %}
-    <li class="suave">Sin deudas registradas 🎉</li>
     {% endfor %}
   </ul>
 </section>
+{% else %}
+<section class="tarjeta a-deudas">
+  <h2>Deudas y topes</h2>
+  <p class="suave">Registra tus deudas y tus topes por categoría para que Kuadra te diga qué pagar primero y te avise cuando te pases.</p>
+  <br>
+  <a class="boton-pildora" href="{{ url_for('kuadra.finanzas') }}">Registrar deudas y topes</a>
+</section>
+{% endif %}
 </div>
 {% endblock %}

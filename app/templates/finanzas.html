@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% from "_campo.html" import campo %}
+{% block titulo %}Kuadra · Deudas y topes{% endblock %}
+{% block encabezado %}Deudas y topes{% endblock %}
+{% block contenido %}
+<div class="dashboard analisis">
+  <section class="tarjeta a-dona">
+    <h2>Mis deudas</h2>
+    <p class="suave">Ordenadas por cuál pagar primero (la tasa más alta).</p>
+    <ul class="lista">
+      {% for deuda in deudas %}
+      <li>
+        <div><strong>{{ loop.index }}. {{ deuda.nombre }}</strong><br>
+          <span class="suave">{{ deuda.tasa_ea }}% E.A. · cuota {{ deuda.cuota|pesos }} · saldo {{ deuda.saldo|pesos }}</span></div>
+        <form method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="accion" value="eliminar">
+          <input type="hidden" name="deuda_id" value="{{ deuda.id }}">
+          <button class="chip contorno pequeno boton-chip" type="submit" aria-label="Eliminar {{ deuda.nombre }}">Eliminar</button>
+        </form>
+      </li>
+      {% else %}
+      <li class="suave">No tienes deudas registradas 🎉</li>
+      {% endfor %}
+    </ul>
+    <h3 class="subtitulo">Agregar deuda</h3>
+    <form method="post" novalidate id="form-deuda">
+      {{ form.hidden_tag() }}
+      <input type="hidden" name="accion" value="deuda">
+      {{ campo(form.nombre, placeholder="Tarjeta de crédito, crédito de libre inversión…", maxlength=40) }}
+      {{ campo(form.saldo, inputmode="numeric", placeholder="1800000") }}
+      {{ campo(form.tasa_ea, inputmode="decimal", placeholder="28.6") }}
+      {{ campo(form.cuota, inputmode="numeric", placeholder="350000") }}
+      <button class="boton azul" type="submit">Guardar deuda</button>
+    </form>
+  </section>
+
+  <section class="tarjeta a-tendencia">
+    <h2>Topes mensuales</h2>
+    <p class="suave">Cuánto quieres gastar como máximo al mes en cada categoría. Déjalo vacío si no quieres tope.</p>
+    <br>
+    <form method="post" id="form-topes">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="accion" value="topes">
+      {% for c in categorias %}
+      <div class="campo">
+        <label for="tope-{{ c }}">{{ c }}</label>
+        <input id="tope-{{ c }}" name="tope-{{ c }}" type="number" min="0" step="1000" inputmode="numeric"
+               value="{{ topes.get(c, '') }}" placeholder="Sin tope">
+      </div>
+      {% endfor %}
+      <button class="boton azul" type="submit">Guardar topes</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

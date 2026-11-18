@@ -1,7 +1,16 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileRequired
-from wtforms import DateField, HiddenField, IntegerField, SelectField, SelectMultipleField, StringField, TextAreaField
-from wtforms.validators import DataRequired, Length, NumberRange
+from wtforms import (
+    DateField,
+    DecimalField,
+    HiddenField,
+    IntegerField,
+    SelectField,
+    SelectMultipleField,
+    StringField,
+    TextAreaField,
+)
+from wtforms.validators import DataRequired, InputRequired, Length, NumberRange
 
 from app.dominio import CATEGORIAS, MEDIOS, TIPOS
 
@@ -44,6 +53,15 @@ class PagoForm(FlaskForm):
 
 class FotoForm(FlaskForm):
     foto = FileField("Foto de perfil", validators=[FileRequired()])
+
+
+class DeudaForm(FlaskForm):
+    nombre = StringField("Nombre", validators=[DataRequired(), Length(max=40)])
+    saldo = IntegerField("Saldo pendiente", validators=[DataRequired(), NumberRange(min=1, max=10_000_000_000)])
+    tasa_ea = DecimalField(
+        "Tasa efectiva anual (%)", places=2, validators=[InputRequired(), NumberRange(min=0, max=200)]
+    )
+    cuota = IntegerField("Cuota mensual", validators=[InputRequired(), NumberRange(min=0, max=1_000_000_000)])
 
 
 class PreguntaForm(FlaskForm):

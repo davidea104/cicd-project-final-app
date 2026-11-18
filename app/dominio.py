@@ -53,6 +53,7 @@ class Deuda:
     saldo: int
     tasa_ea: float
     cuota: int
+    id: str = ""
 
 @dataclass(frozen=True)
 class Grupo:
@@ -120,6 +121,30 @@ def validar_nombre(nombre: str, maximo: int = 40) -> str:
     if len(nombre) > maximo:
         raise DatoInvalido(f"El nombre puede tener máximo {maximo} caracteres.")
     return nombre
+
+
+def validar_deuda(deuda: Deuda) -> Deuda:
+    validar_nombre(deuda.nombre)
+    if deuda.saldo <= 0:
+        raise DatoInvalido("El saldo debe ser mayor que cero.")
+    if not 0 <= deuda.tasa_ea <= 200:
+        raise DatoInvalido("La tasa efectiva anual debe estar entre 0% y 200%.")
+    if deuda.cuota < 0:
+        raise DatoInvalido("La cuota no puede ser negativa.")
+    return deuda
+
+
+def validar_topes(topes: dict[str, int]) -> dict[str, int]:
+    """Solo categorías conocidas y montos >= 0; 0 o vacío significa sin tope."""
+    limpios = {}
+    for categoria, tope in topes.items():
+        if categoria not in CATEGORIAS:
+            raise DatoInvalido(f"Categoría no válida: {categoria}")
+        if tope < 0:
+            raise DatoInvalido("Los topes no pueden ser negativos.")
+        if tope > 0:
+            limpios[categoria] = tope
+    return limpios
 
 
 def validar_pago(pago: Pago, miembros: list[str]) -> Pago:

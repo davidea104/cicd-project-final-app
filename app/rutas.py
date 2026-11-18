@@ -17,12 +17,14 @@ from flask import (
     session,
     url_for,
 )
+from flask_wtf import FlaskForm
 
 from app import dominio as d
 from app import google_auth
 from app.almacen import USUARIO_DEMO, Almacen
 from app.asesor import AsesorNoDisponible, ModeloFalso, ModeloIA
 from app.formularios import (
+    DeudaForm,
     FotoForm,
     GastoGrupoForm,
     GrupoForm,
@@ -326,6 +328,50 @@ def analisis():
         alertas=d.alertas_topes(por_categoria, topes),
         diferencia_pct=round((tope_total - gastado_con_tope) * 100 / tope_total) if tope_total else None,
         deudas=d.orden_pago_deudas(almacen().deudas(u)),
+    )
+
+
+# ---------- Deudas y topes ----------
+
+@bp.route("/finanzas", methods=["GET", "POST"])
+@login_requerido
+def finanzas():
+    u = session["usuario"]
+    form = DeudaForm(prefix="d")
+    accion = request.form.get("accion")
+    if request.method == "POST" and accion == "deuda":
+        if form.validate_on_submit():
+            try:
+                deuda = d.validar_deuda(d.Deuda(form.nombre.data.strip(), form.saldo.data, float(form.tasa_ea.data),
+                                                form.cuota.data))
+            except d.DatoInvalido as err:
+                flash(str(err), "error")
+            else:
+                almacen().agregar_deuda(u, deuda)
+                flash(f"Deuda «{deuda.nombre}» registrada ✅", "ok")
+                return redirect(url_for("kuadra.finanzas"))
+        else:
+            flash("Revisa los datos de la deuda.", "error")
+    elif request.method == "POST" and accion in ("topes", "eliminar"):
+        if not FlaskForm().validate_on_submit():  # solo valida el token CSRF
+            abort(400)
+        if accion == "eliminar":
+            almacen().eliminar_deuda(u, request.form.get("deuda_id", ""))
+            flash("Deuda eliminada.", "info")
+        else:
+            try:
+                topes = d.validar_topes({
+                    c: int(request.form.get(f"tope-{c}") or 0) for c in d.CATEGORIAS
+                })
+            except (ValueError, d.DatoInvalido) as err:
+                flash(str(err) if isinstance(err, d.DatoInvalido) else "Los topes deben ser números.", "error")
+            else:
+                almacen().fijar_topes(u, topes)
+                flash("Topes guardados ✅", "ok")
+        return redirect(url_for("kuadra.finanzas"))
+    return render_template(
+        "finanzas.html", form=form, deudas=d.orden_pago_deudas(almacen().deudas(u)),
+        topes=almacen().topes(u), categorias=d.CATEGORIAS,
     )
 
 
