@@ -123,7 +123,12 @@ resource "aws_secretsmanager_secret_version" "app" {
 
 resource "aws_cloudwatch_log_group" "ecs_logs" {
   name              = "/ecs/${local.name_prefix}"
-  retention_in_days = 7
+  retention_in_days = 30
+}
+
+resource "aws_cloudwatch_log_group" "api_logs" {
+  name              = "/apigateway/${local.name_prefix}"
+  retention_in_days = 30
 }
 
 # --- Cluster ECS ---
@@ -260,6 +265,20 @@ resource "aws_apigatewayv2_stage" "default" {
   default_route_settings {
     throttling_burst_limit = 100
     throttling_rate_limit  = 50
+  }
+
+  # Registro de cada petición (sin cuerpo ni cabeceras: no guarda datos personales)
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.api_logs.arn
+    format = jsonencode({
+      requestId = "$context.requestId"
+      ip        = "$context.identity.sourceIp"
+      metodo    = "$context.httpMethod"
+      ruta      = "$context.path"
+      estado    = "$context.status"
+      latencia  = "$context.responseLatency"
+      fecha     = "$context.requestTime"
+    })
   }
 }
 
