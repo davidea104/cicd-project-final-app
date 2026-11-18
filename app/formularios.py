@@ -1,0 +1,51 @@
+from flask_wtf import FlaskForm
+from flask_wtf.file import FileField, FileRequired
+from wtforms import DateField, HiddenField, IntegerField, SelectField, SelectMultipleField, StringField, TextAreaField
+from wtforms.validators import DataRequired, Length, NumberRange
+
+from app.dominio import CATEGORIAS, MEDIOS, TIPOS
+
+
+class MovimientoForm(FlaskForm):
+    tipo = SelectField("Tipo", choices=[(t, t.capitalize()) for t in TIPOS])
+    monto = IntegerField("Monto", validators=[DataRequired(), NumberRange(min=1, max=1_000_000_000)])
+    descripcion = StringField("Descripción", validators=[DataRequired(), Length(max=80)])
+    categoria = SelectField("Categoría", choices=[(c, c) for c in CATEGORIAS])
+    medio = SelectField("Medio", choices=[(m, m) for m in MEDIOS])
+    fecha = DateField("Fecha", validators=[DataRequired()])
+
+
+class GastoGrupoForm(FlaskForm):
+    monto = IntegerField("Monto", validators=[DataRequired(), NumberRange(min=1, max=1_000_000_000)])
+    descripcion = StringField("Descripción", validators=[DataRequired(), Length(max=80)])
+    pagado_por = SelectField("¿Quién pagó?")
+    dividido_entre = SelectMultipleField("Dividir entre", validators=[DataRequired()])
+    fecha = DateField("Fecha", validators=[DataRequired()])
+
+
+class RegistroForm(FlaskForm):
+    nombre = StringField("¿Cómo te llamas?", validators=[DataRequired(), Length(max=40)])
+
+
+class GrupoForm(FlaskForm):
+    nombre = StringField("Nombre del grupo", validators=[DataRequired(), Length(max=40)])
+    correos = TextAreaField("Correos de las personas (separados por coma)", validators=[Length(max=1000)])
+
+
+class InvitarForm(FlaskForm):
+    correo = StringField("Correo", validators=[DataRequired(), Length(max=254)])
+
+
+class PagoForm(FlaskForm):
+    de = SelectField("¿Quién pagó?")
+    para = SelectField("¿A quién?")
+    monto = IntegerField("Monto", validators=[DataRequired(), NumberRange(min=1, max=1_000_000_000)])
+
+
+class FotoForm(FlaskForm):
+    foto = FileField("Foto de perfil", validators=[FileRequired()])
+
+
+class PreguntaForm(FlaskForm):
+    pregunta = TextAreaField("Pregunta", validators=[DataRequired(), Length(max=500)])
+    siguiente = HiddenField()

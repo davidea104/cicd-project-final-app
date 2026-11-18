@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#14123A">
+  <title>{% block titulo %}Kuadra{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='kuadra.css') }}">
+</head>
+<body class="{% block clase_body %}{% endblock %}">
+  {% if config.AMBIENTE not in ('production', 'local') %}<div class="ambiente">{{ config.AMBIENTE }}</div>{% endif %}
+  {% block cuerpo %}
+  {% set ep = request.endpoint %}
+  <div class="layout">
+    <nav class="nav" aria-label="Navegación principal">
+      <a class="marca-lateral solo-escritorio" href="{{ url_for('kuadra.inicio') }}"><span class="logo-mini">K</span>Kuadra</a>
+      <a href="{{ url_for('kuadra.inicio') }}" class="{{ 'activo' if ep == 'kuadra.inicio' }}"><span class="ico" aria-hidden="true">⌂</span><span>Inicio</span></a>
+      <a href="{{ url_for('kuadra.analisis') }}" class="{{ 'activo' if ep == 'kuadra.analisis' }}"><span class="ico" aria-hidden="true">◔</span><span>Análisis</span></a>
+      <a href="{{ url_for('kuadra.compartido') }}" class="{{ 'activo' if ep in ('kuadra.compartido', 'kuadra.nuevo_gasto_grupo', 'kuadra.nuevo_grupo') }}"><span class="ico" aria-hidden="true">⇄</span><span>Compartido</span></a>
+      <a href="{{ url_for('kuadra.nuevo_movimiento') }}" class="{{ 'activo' if ep == 'kuadra.nuevo_movimiento' }}"><span class="ico" aria-hidden="true">＋</span><span>Agregar</span></a>
+      <a href="{{ url_for('kuadra.perfil') }}" class="{{ 'activo' if ep == 'kuadra.perfil' }} solo-movil"><span class="ico" aria-hidden="true">☺</span><span>Perfil</span></a>
+      {% if yo %}
+      <a class="usuario-lateral solo-escritorio {{ 'activo' if ep == 'kuadra.perfil' }}" href="{{ url_for('kuadra.perfil') }}">
+        {% include "_avatar.html" %}
+        <span><strong>{{ yo.nombre }}</strong><span class="suave">Mi perfil</span></span>
+      </a>
+      {% endif %}
+    </nav>
+
+    <main class="contenedor">
+      {% block cabecera %}
+      <header class="encabezado">
+        <h1 class="titulo-pagina">{% block encabezado %}{% endblock %}</h1>
+        <div class="acciones-encabezado">
+          <a class="circulo primario" href="{{ url_for('kuadra.nuevo_movimiento') }}" aria-label="Agregar movimiento">+</a>
+        </div>
+      </header>
+      {% endblock %}
+      {% with mensajes = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in mensajes %}<div class="aviso {{ cat }}">{{ msg }}</div>{% endfor %}
+      {% endwith %}
+      {% block contenido %}{% endblock %}
+    </main>
+
+    {% include "_asesor.html" %}
+  </div>
+  <a class="boton-asesor solo-sin-panel" href="#asesor" aria-label="Abrir asesor">✦</a>
+  {% endblock %}
+  {% block scripts %}{% endblock %}
+</body>
+</html>

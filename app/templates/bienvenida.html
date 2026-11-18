@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block titulo %}Kuadra · Bienvenida{% endblock %}
+{% block clase_body %}fondo-noche{% endblock %}
+{% block cuerpo %}
+<main class="bienvenida">
+  <div>
+    <div class="logo">K</div>
+    <h1>Tus cuentas,<br><b>en orden.</b></h1>
+    <p>Lo tuyo es tuyo. Lo compartido, claro.<br>Nadie más ve tus gastos personales.</p>
+  </div>
+  <div class="acciones-bienvenida">
+    {% with mensajes = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in mensajes %}<div class="aviso {{ cat }}">{{ msg }}</div>{% endfor %}
+    {% endwith %}
+    {% if google %}
+    <a class="boton claro" href="{{ url_for('kuadra.login_google') }}" id="login-google">Continuar con Google</a>
+    {% else %}
+    <button class="boton claro" type="button" disabled title="Falta configurar Google">Continuar con Google</button>
+    {% endif %}
+    {% if modo_demo %}
+    <form method="post" action="{{ url_for('kuadra.entrar_demo') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="boton fantasma" type="submit" id="entrar-demo">Probar la demo</button>
+    </form>
+    {% endif %}
+  </div>
+</main>
+{% endblock %}

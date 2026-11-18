@@ -1,0 +1,1 @@
+{% if yo and yo.foto %}<img class="avatar {{ clase_avatar|default('') }}" src="{{ yo.foto }}" alt="Foto de {{ yo.nombre }}" referrerpolicy="no-referrer">{% else %}<span class="avatar {{ clase_avatar|default('') }}" aria-hidden="true">{{ yo.inicial if yo else 'K' }}</span>{% endif %}

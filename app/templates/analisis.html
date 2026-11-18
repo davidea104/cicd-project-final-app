@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block encabezado %}Análisis{% endblock %}
+{% block contenido %}
+{% if diferencia_pct is not none %}
+  {% if diferencia_pct >= 0 %}
+  <div class="aviso ok">🌱 Vas {{ diferencia_pct }}% por debajo de tus topes. ¡Bien!</div>
+  {% else %}
+  <div class="aviso error">⚠️ Vas {{ -diferencia_pct }}% por encima de tus topes.</div>
+  {% endif %}
+{% endif %}
+<div class="dashboard analisis">
+<section class="tarjeta a-dona">
+  <h2>Tus gastos del mes</h2>
+  <div class="dona-caja">
+    <svg class="dona" viewBox="0 0 42 42" role="img" aria-label="Gastos por categoría">
+      <circle cx="21" cy="21" r="15.915" fill="none" stroke="#F6F7FE" stroke-width="6"></circle>
+      {% for s in segmentos %}
+      <circle cx="21" cy="21" r="15.915" fill="none" stroke="{{ s.color }}" stroke-width="6"
+              stroke-dasharray="{{ s.dash }}" stroke-dashoffset="{{ s.offset }}"></circle>
+      {% endfor %}
+      <text x="21" y="21.5" text-anchor="middle" class="dona-total">{{ total_gastos|pesos }}</text>
+      <text x="21" y="25.5" text-anchor="middle" class="dona-sub">Total gastado</text>
+    </svg>
+  </div>
+  <div class="leyenda">
+    {% for s in segmentos %}
+    <div><svg width="10" height="10" aria-hidden="true"><circle cx="5" cy="5" r="5" fill="{{ s.color }}"></circle></svg> {{ s.categoria }} <strong>{{ s.pct }}%</strong></div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="tarjeta a-tendencia">
+  <h2>Tendencia de gastos</h2>
+  <p class="suave">Últimos 6 meses</p>
+  <svg class="barras" viewBox="0 0 120 70" role="img" aria-label="Gastos por mes">
+    {% for b in barras %}
+      {% set x = loop.index0 * 20 + 4 %}
+      {% set h = b.alto * 0.5 %}
+      <rect x="{{ x }}" y="{{ 56 - h }}" width="12" height="{{ h }}" rx="4" fill="{{ '#4F46C8' if loop.last else '#D9DBFB' }}"></rect>
+      <text x="{{ x + 6 }}" y="66" text-anchor="middle">{{ b.mes }}</text>
+    {% endfor %}
+  </svg>
+</section>
+
+<section class="tarjeta a-deudas" id="deudas">
+  <h2>¿Qué deuda pagar primero?</h2>
+  <ul class="lista">
+    {% for deuda in deudas %}
+    <li><div><strong>{{ loop.index }}. {{ deuda.nombre }}</strong><br><span class="suave">{{ deuda.tasa_ea }}% E.A. · cuota {{ deuda.cuota|pesos }}</span></div><span>{{ deuda.saldo|pesos }}</span></li>
+    {% else %}
+    <li class="suave">Sin deudas registradas 🎉</li>
+    {% endfor %}
+  </ul>
+</section>
+</div>
+{% endblock %}

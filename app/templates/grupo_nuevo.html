@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% from "_campo.html" import campo %}
+{% block titulo %}Kuadra · Nuevo grupo{% endblock %}
+{% block encabezado %}Nuevo grupo{% endblock %}
+{% block contenido %}
+<form method="post" class="tarjeta" novalidate>
+  {{ form.hidden_tag() }}
+  {{ campo(form.nombre, placeholder="Casa, Hermanas, Viaje…", maxlength=40) }}
+  {{ campo(form.correos, rows=3, placeholder="ana@gmail.com, sofia@gmail.com") }}
+  <p class="suave">Cada persona verá el grupo cuando entre a Kuadra con ese correo de Google. Solo ven lo del grupo, nunca tus gastos personales.</p>
+  <br>
+  <button class="boton azul" type="submit">Crear grupo</button>
+</form>
+{% endblock %}

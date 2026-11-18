@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% from "_campo.html" import campo %}
+{% block encabezado %}Gasto en {{ grupo }}{% endblock %}
+{% block contenido %}
+<form method="post" class="tarjeta" novalidate>
+  {{ form.hidden_tag() }}
+  {{ campo(form.monto, inputmode="numeric", placeholder="90000") }}
+  {{ campo(form.descripcion, placeholder="Internet") }}
+  {{ campo(form.pagado_por) }}
+  {{ campo(form.dividido_entre) }}
+  {{ campo(form.fecha) }}
+  <button class="boton" type="submit">Guardar</button>
+</form>
+{% endblock %}

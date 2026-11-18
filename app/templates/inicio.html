@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block titulo %}Kuadra · Inicio{% endblock %}
+
+{% block cabecera %}
+<header class="encabezado">
+  <div class="perfil">
+    <a href="{{ url_for('kuadra.perfil') }}" class="solo-movil-flex">{% include "_avatar.html" %}</a>
+    <div>
+      <h1 class="saludo">Hola, {{ yo.primer_nombre }} 👋</h1>
+      <span class="suave">{% if alertas %}Tienes {{ alertas|length }} alerta{{ 's' if alertas|length > 1 }} este mes{% else %}Todo en orden este mes ✨{% endif %}</span>
+    </div>
+  </div>
+  <div class="acciones-encabezado">
+    <form method="post" action="{{ url_for('kuadra.salir') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="circulo" type="submit" aria-label="Cerrar sesión" title="Cerrar sesión">⏻</button>
+    </form>
+    <a class="circulo primario" href="{{ url_for('kuadra.nuevo_movimiento') }}" aria-label="Agregar movimiento">+</a>
+  </div>
+</header>
+{% endblock %}
+
+{% block contenido %}
+<div class="dashboard">
+  <section class="tarjeta d-balance">
+    <div class="etiquetas">
+      <span class="chip azul pequeno">{{ mes }}</span>
+      <span class="chip azul pequeno">{{ dias_restantes }} día{{ 's' if dias_restantes != 1 }} restantes</span>
+    </div>
+    <h2>Balance del mes</h2>
+    <div class="monto-grande" id="balance">{{ balance|pesos }}</div>
+    <div class="kpis">
+      <div><span class="suave">Ingresos</span><strong class="positivo">{{ ingresos|pesos }}</strong></div>
+      <div><span class="suave">Gastos</span><strong>{{ gastos|pesos }}</strong></div>
+      <div><span class="suave">Compartido</span>
+        {% if saldo_compartido > 0 %}<strong class="positivo">Te deben {{ saldo_compartido|pesos }}</strong>
+        {% elif saldo_compartido < 0 %}<strong class="negativo">Debes {{ (-saldo_compartido)|pesos }}</strong>
+        {% else %}<strong>A paz y salvo ✨</strong>{% endif %}
+      </div>
+    </div>
+    <div class="pie-tarjeta"><span></span><a class="boton-pildora" href="{{ url_for('kuadra.analisis') }}">Ver análisis</a></div>
+  </section>
+
+  <a class="tarjeta azul promo d-promo solo-sin-panel-bloque" href="#asesor">
+    <span class="marca">Asesor Kuadra ✦</span>
+    <p>¿Qué deuda pago primero?</p>
+    <span class="flecha" aria-hidden="true">→</span>
+  </a>
+
+  <section class="tarjeta d-semana">
+    <h2>Gastos de la semana</h2>
+    <p class="suave">{{ total_semana|pesos }}</p>
+    <svg class="barras-pildora" viewBox="0 0 100 80" role="img" aria-label="Gastos de los últimos 7 días">
+      {% for b in semana %}
+        {% set x = loop.index0 * 14 + 2 %}
+        {% set h = b.alto * 0.62 %}
+        <rect x="{{ x }}" y="{{ 66 - h }}" width="10" height="{{ h }}" rx="5" fill="{{ '#4F46C8' if loop.last else '#D9DBFB' }}"></rect>
+        <text x="{{ x + 5 }}" y="77" text-anchor="middle">{{ b.dia }}</text>
+      {% endfor %}
+    </svg>
+  </section>
+
+  <section class="tarjeta d-alertas">
+    <div class="cabecera"><h2>Alertas</h2><span class="chip contorno pequeno">Topes</span></div>
+    <ul class="lista check">
+      {% for a in alertas %}
+      <li><span class="punto mal"></span><span>{{ a.categoria }}: te pasaste <strong>{{ a.exceso|pesos }}</strong> del tope de {{ a.tope|pesos }}</span></li>
+      {% else %}
+      <li><span class="punto"></span><span class="suave">Vas dentro de todos tus topes ✨</span></li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="tarjeta d-movs">
+    <div class="cabecera"><h2>Movimientos recientes</h2><a class="chip contorno pequeno" href="{{ url_for('kuadra.nuevo_movimiento') }}">+ Agregar</a></div>
+    <ul class="lista">
+      {% for m in recientes %}
+      <li>
+        <div class="izq">
+          <span class="icono-mov" aria-hidden="true">{{ '↑' if m.tipo == 'ingreso' else ('⇣' if m.tipo == 'retiro' else '↓') }}</span>
+          <div><strong>{{ m.descripcion }}</strong><br><span class="suave">{{ m.categoria }} · {{ m.fecha.strftime('%d/%m') }}</span></div>
+        </div>
+        {% if m.tipo == 'ingreso' %}<span class="positivo">+{{ m.monto|pesos }}</span>
+        {% elif m.tipo == 'retiro' %}<span class="suave">{{ m.monto|pesos }}</span>
+        {% else %}<span>-{{ m.monto|pesos }}</span>{% endif %}
+      </li>
+      {% else %}
+      <li class="suave">Aún no tienes movimientos.</li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block titulo %}Kuadra · Compartido{% endblock %}
+{% block encabezado %}Compartido{% endblock %}
+{% block contenido %}
+<a class="boton azul" href="{{ url_for('kuadra.nuevo_grupo') }}" id="nuevo-grupo">+ Nuevo grupo</a>
+<br>
+
+{% for g in grupos %}
+<section class="tarjeta grupo">
+  <div class="cabecera">
+    <h2>{{ g.nombre }}</h2>
+    <a class="boton-pildora" href="{{ url_for('kuadra.nuevo_gasto_grupo', grupo_id=g.id) }}">+ Gasto</a>
+  </div>
+  <div class="etiquetas">
+    {% for m in g.miembros %}<span class="chip pequeno {{ 'azul' if m == 'Tú' else 'contorno' }}">{{ m }}</span>{% endfor %}
+  </div>
+
+  {% if g.mi_saldo > 0 %}<p class="positivo">Te deben {{ g.mi_saldo|pesos }}</p>
+  {% elif g.mi_saldo < 0 %}<p class="negativo">Debes {{ (-g.mi_saldo)|pesos }}</p>
+  {% else %}<p class="suave">A paz y salvo ✨</p>{% endif %}
+
+  {% if g.transferencias %}
+  <h3 class="subtitulo">Para quedar a paz y salvo</h3>
+  <ul class="lista">
+    {% for t in g.transferencias %}
+    <li>
+      <span>{{ t.texto }} <strong>{{ t.monto|pesos }}</strong></span>
+      {% if usuario in (t.de, t.para) %}
+      <form method="post" action="{{ url_for('kuadra.registrar_pago', grupo_id=g.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="de" value="{{ t.de }}">
+        <input type="hidden" name="para" value="{{ t.para }}">
+        <input type="hidden" name="monto" value="{{ t.monto }}">
+        <button class="chip contorno pequeno boton-chip" type="submit">Marcar pagado ✓</button>
+      </form>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  <details class="registrar-pago">
+    <summary class="subtitulo">Registrar una transferencia</summary>
+    <form method="post" action="{{ url_for('kuadra.registrar_pago', grupo_id=g.id) }}" class="pago-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label class="oculto" for="de-{{ g.id }}">Quién pagó</label>
+      <select id="de-{{ g.id }}" name="de">{% for v, t in g.opciones %}<option value="{{ v }}">{{ t }}</option>{% endfor %}</select>
+      <span class="suave">le transfirió a</span>
+      <label class="oculto" for="para-{{ g.id }}">A quién</label>
+      <select id="para-{{ g.id }}" name="para">{% for v, t in g.opciones %}<option value="{{ v }}" {{ 'selected' if loop.index == 2 }}>{{ t }}</option>{% endfor %}</select>
+      <label class="oculto" for="monto-{{ g.id }}">Monto</label>
+      <input id="monto-{{ g.id }}" name="monto" type="number" min="1" inputmode="numeric" placeholder="Monto" required>
+      <button class="boton-pildora" type="submit">Registrar</button>
+    </form>
+  </details>
+
+  {% if g.pagos %}
+  <h3 class="subtitulo">Transferencias registradas</h3>
+  <ul class="lista">
+    {% for p in g.pagos %}
+    <li><span>{{ nombre(p.de) }} → {{ nombre(p.para) }} <span class="suave">· {{ p.fecha.strftime('%d/%m') }}</span></span><span class="positivo">{{ p.monto|pesos }}</span></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if g.gastos %}
+  <h3 class="subtitulo">Últimos gastos</h3>
+  <ul class="lista">
+    {% for gasto in g.gastos %}
+    <li><div><strong>{{ gasto.descripcion }}</strong><br><span class="suave">Pagó {{ nombre(gasto.pagado_por) }} · entre {{ gasto.dividido_entre|length }}</span></div><span>{{ gasto.monto|pesos }}</span></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  <form class="invitar" method="post" action="{{ url_for('kuadra.invitar', grupo_id=g.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="oculto" for="correo-{{ g.id }}">Correo para invitar</label>
+    <input id="correo-{{ g.id }}" name="correo" type="email" placeholder="Invitar por correo" maxlength="254" required>
+    <button class="boton-pildora" type="submit">Compartir</button>
+  </form>
+</section>
+{% else %}
+<section class="tarjeta">
+  <h2>Aún no tienes grupos</h2>
+  <p class="suave">Crea uno e invita por correo a tu familia, pareja o roommates. Cuando entren a Kuadra con ese correo, verán el grupo.</p>
+</section>
+{% endfor %}
+{% endblock %}

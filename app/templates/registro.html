@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "_campo.html" import campo %}
+{% block titulo %}Kuadra · Bienvenida{% endblock %}
+{% block clase_body %}fondo-noche{% endblock %}
+{% block cuerpo %}
+<main class="bienvenida">
+  <div>
+    <div class="logo">K</div>
+    <h1>¡Hola!<br><b>Empecemos.</b></h1>
+    <p>Entraste como <strong>{{ correo }}</strong>.<br>Así te verán las personas con quienes compartas gastos.</p>
+    {% with mensajes = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in mensajes %}<div class="aviso {{ cat }}">{{ msg }}</div>{% endfor %}
+    {% endwith %}
+  </div>
+  <form method="post" class="tarjeta" novalidate>
+    {{ form.hidden_tag() }}
+    {{ campo(form.nombre, placeholder="Tu nombre", autocomplete="given-name", maxlength=40, autofocus=true) }}
+    <button class="boton azul" type="submit" id="crear-cuenta">Crear mi cuenta</button>
+  </form>
+</main>
+{% endblock %}

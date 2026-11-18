@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% from "_campo.html" import campo %}
+{% block encabezado %}Nuevo movimiento{% endblock %}
+{% block contenido %}
+<form method="post" class="tarjeta" novalidate>
+  {{ form.hidden_tag() }}
+  {{ campo(form.tipo) }}
+  {{ campo(form.monto, inputmode="numeric", placeholder="45000") }}
+  {{ campo(form.descripcion, placeholder="Almuerzo") }}
+  {{ campo(form.categoria) }}
+  {{ campo(form.medio) }}
+  {{ campo(form.fecha) }}
+  <button class="boton" type="submit">Guardar</button>
+</form>
+{% endblock %}

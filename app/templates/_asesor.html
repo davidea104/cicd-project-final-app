@@ -1,0 +1,48 @@
+<aside id="asesor" class="panel-asesor" aria-label="Asesor Kuadra">
+  <header class="panel-cabecera">
+    <div class="perfil">
+      <div class="avatar asesor-avatar" aria-hidden="true">✦</div>
+      <div><strong>Asesor Kuadra</strong><span class="suave">Con IA · Gemini</span></div>
+    </div>
+    <div class="acciones-encabezado">
+      {% if asesor_chat %}
+      <form method="post" action="{{ url_for('kuadra.limpiar_asesor') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="siguiente" value="{{ request.path }}">
+        <button class="circulo pequeno" type="submit" title="Nueva conversación" aria-label="Nueva conversación">↺</button>
+      </form>
+      {% endif %}
+      <a class="circulo pequeno solo-movil" href="#" aria-label="Cerrar asesor">✕</a>
+    </div>
+  </header>
+
+  <div class="panel-chat">
+    {% for m in asesor_chat|reverse %}
+    <div class="burbuja {{ m.de }}">{{ m.texto }}</div>
+    {% else %}
+    <div class="burbuja kuadra">¡Hola! Soy tu asesor. Pregúntame sobre tus gastos, topes o deudas. 💬</div>
+    {% endfor %}
+  </div>
+
+  {% if not asesor_chat %}
+  <div class="sugerencias">
+    {% for s in asesor_sugerencias %}
+    <form method="post" action="{{ url_for('kuadra.preguntar_asesor') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="siguiente" value="{{ request.path }}">
+      <input type="hidden" name="pregunta" value="{{ s }}">
+      <button class="chip contorno" type="submit">{{ s }}</button>
+    </form>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <form class="panel-entrada" method="post" action="{{ url_for('kuadra.preguntar_asesor') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {{ asesor_form.siguiente() }}
+    <label class="oculto" for="pregunta">Pregunta</label>
+    {{ asesor_form.pregunta(id="pregunta", rows=1, placeholder="Escribe tu pregunta…", maxlength=500, required=true) }}
+    <button class="circulo primario" type="submit" aria-label="Enviar">↑</button>
+  </form>
+  <p class="suave nota-privacidad">Solo comparto un resumen de tus números, sin nombres ni descripciones.</p>
+</aside>

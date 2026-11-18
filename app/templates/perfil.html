@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% from "_campo.html" import campo %}
+{% block titulo %}Kuadra · Perfil{% endblock %}
+{% block encabezado %}Mi perfil{% endblock %}
+{% block contenido %}
+<div class="columnas">
+  <section class="tarjeta perfil-tarjeta">
+    {% with clase_avatar = 'avatar-grande' %}{% include "_avatar.html" %}{% endwith %}
+    <h2>{{ yo.nombre }}</h2>
+    <p class="suave">{{ correo }}</p>
+
+    <form method="post" enctype="multipart/form-data" class="form-foto" id="form-foto">
+      {{ form_foto.hidden_tag() }}
+      <label class="boton-pildora" for="f-foto">Cambiar foto</label>
+      {{ form_foto.foto(id="f-foto", accept="image/jpeg,image/png,image/webp", class="oculto") }}
+      <noscript><button class="boton-pildora" type="submit">Subir</button></noscript>
+    </form>
+    <p class="suave nota-foto">JPG, PNG o WebP. La reducimos a 256×256 antes de subirla.</p>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Datos</h2>
+    <br>
+    <form method="post" novalidate>
+      {{ form_nombre.hidden_tag() }}
+      {{ campo(form_nombre.nombre, maxlength=40) }}
+      <button class="boton azul" type="submit">Guardar nombre</button>
+    </form>
+    <br>
+    <form method="post" action="{{ url_for('kuadra.salir') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="boton claro borde" type="submit">Cerrar sesión</button>
+    </form>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='foto.js') }}"></script>{% endblock %}
