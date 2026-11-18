@@ -4,8 +4,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 WORKDIR /app
+
+# Parches de seguridad del sistema base (p. ej. zlib)
+RUN apt-get update && apt-get upgrade -y --no-install-recommends && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
-RUN pip install --no-cache-dir --require-hashes --only-binary=:all: -r requirements.txt
+# Instala dependencias con hashes y luego quita pip: no se usa en producción y trae librerías vulnerables
+RUN pip install --no-cache-dir --require-hashes --only-binary=:all: -r requirements.txt \
+    && python -m pip uninstall -y pip
 
 COPY app/ ./app/
 
