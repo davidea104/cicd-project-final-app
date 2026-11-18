@@ -4,3 +4,5 @@ pytest-cov
 ruff
 pip-audit
 moto[dynamodb]
+requests
+selenium

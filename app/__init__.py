@@ -33,6 +33,8 @@ def create_app(config: dict | None = None) -> Flask:
         GOOGLE_CLIENT_SECRET=os.environ.get("GOOGLE_CLIENT_SECRET", ""),
         URL_PUBLICA=os.environ.get("URL_PUBLICA", ""),
         DYNAMODB_TABLA=os.environ.get("DYNAMODB_TABLA", ""),
+        # Solo staging: permite a las pruebas automáticas iniciar sesión sin Google (ver rutas.login_pruebas)
+        TOKEN_PRUEBAS=os.environ.get("TOKEN_PRUEBAS", ""),
         GEMINI_MODELO=os.environ.get("GEMINI_MODELO", "gemini-flash-lite-latest"),
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
