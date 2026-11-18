@@ -18,8 +18,8 @@ from flask import (
     url_for,
 )
 
-from app import csrf, google_auth
 from app import dominio as d
+from app import google_auth
 from app.almacen import USUARIO_DEMO, Almacen
 from app.asesor import AsesorNoDisponible, ModeloFalso, ModeloIA
 from app.formularios import (
@@ -193,7 +193,6 @@ DOMINIO_PRUEBAS = "@pruebas.kuadra.app"
 
 
 @bp.post("/pruebas/login")
-@csrf.exempt
 def login_pruebas():
     """Entrada SOLO para pruebas automáticas en staging (Google no permite automatizar su login).
 

@@ -8,9 +8,9 @@ from app.almacen import AlmacenMemoria
 TOKEN = "t" * 40
 
 
-def app_con(ambiente, token=TOKEN):
+def app_con(ambiente, token=TOKEN, csrf=False):
     return create_app({"TESTING": True, "SECRET_KEY": "x", "AMBIENTE": ambiente, "TOKEN_PRUEBAS": token,
-                       "ALMACEN": AlmacenMemoria(), "MODO_DEMO": False})
+                       "ALMACEN": AlmacenMemoria(), "MODO_DEMO": False, "WTF_CSRF_ENABLED": csrf})
 
 
 def entrar(app, correo="ana@pruebas.kuadra.app", token=TOKEN):
@@ -44,3 +44,8 @@ def test_token_corto_no_sirve():
 
 def test_solo_correos_de_prueba():
     assert entrar(app_con("staging"), correo="manuela@gmail.com").status_code == 404
+
+
+def test_exige_token_csrf():
+    """Aunque el token de pruebas sea correcto, sin CSRF se rechaza (400)."""
+    assert entrar(app_con("staging", csrf=True)).status_code == 400

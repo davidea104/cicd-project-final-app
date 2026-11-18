@@ -39,5 +39,6 @@ class Navegador:
         return self.post(ruta_post or ruta_form, data=datos)
 
     def entrar_pruebas(self, correo: str) -> None:
-        r = self.post("/pruebas/login", data={"correo": correo}, headers={"X-Token-Pruebas": TOKEN_PRUEBAS})
+        datos = {"correo": correo, "csrf_token": self.csrf("/bienvenida")}
+        r = self.post("/pruebas/login", data=datos, headers={"X-Token-Pruebas": TOKEN_PRUEBAS})
         assert r.status_code == 200, f"Login de pruebas falló ({r.status_code})"

@@ -108,5 +108,7 @@ def test_asesor_responde(manu):
 
 
 def test_login_de_pruebas_rechaza_token_falso():
-    r = Navegador().post("/pruebas/login", data={"correo": MANU}, headers={"X-Token-Pruebas": "falso" * 10})
+    nav = Navegador()
+    datos = {"correo": MANU, "csrf_token": nav.csrf("/bienvenida")}
+    r = nav.post("/pruebas/login", data=datos, headers={"X-Token-Pruebas": "falso" * 10})
     assert r.status_code == 404
