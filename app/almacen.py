@@ -19,6 +19,7 @@ Diseño de la tabla (una sola tabla, claves PK/SK):
 from __future__ import annotations
 
 import uuid
+from dataclasses import replace
 from datetime import date
 from typing import Protocol
 
@@ -32,6 +33,9 @@ class Almacen(Protocol):
     def agregar_movimiento(self, usuario: str, mov: Movimiento) -> None: ...
     def topes(self, usuario: str) -> dict[str, int]: ...
     def deudas(self, usuario: str) -> list[Deuda]: ...
+    def fijar_topes(self, usuario: str, topes: dict[str, int]) -> None: ...
+    def agregar_deuda(self, usuario: str, deuda: Deuda) -> None: ...
+    def eliminar_deuda(self, usuario: str, deuda_id: str) -> None: ...
     def crear_grupo(self, nombre: str, creador: str, invitados: list[str]) -> str: ...
     def invitar(self, grupo_id: str, correo: str) -> None: ...
     def grupo(self, grupo_id: str) -> Grupo | None: ...
@@ -131,7 +135,10 @@ class AlmacenMemoria:
         self._topes[usuario] = dict(topes)
 
     def agregar_deuda(self, usuario: str, deuda: Deuda) -> None:
-        self._deudas.setdefault(usuario, []).append(deuda)
+        self._deudas.setdefault(usuario, []).append(replace(deuda, id=deuda.id or _nuevo_id()))
+
+    def eliminar_deuda(self, usuario: str, deuda_id: str) -> None:
+        self._deudas[usuario] = [x for x in self._deudas.get(usuario, []) if x.id != deuda_id]
 
 
 # ---------------------------------------------------------------------------
@@ -195,9 +202,21 @@ class AlmacenDynamo:
 
     def deudas(self, usuario: str) -> list[Deuda]:
         return [
-            Deuda(i["nombre"], int(i["saldo"]), float(i["tasa_ea"]), int(i["cuota"]))
+            Deuda(i["nombre"], int(i["saldo"]), float(i["tasa_ea"]), int(i["cuota"]), i["SK"].removeprefix("DEUDA#"))
             for i in self._consultar(f"USER#{usuario}", "DEUDA#")
         ]
+
+    def fijar_topes(self, usuario: str, topes: dict[str, int]) -> None:
+        self._t.put_item(Item={"PK": f"USER#{usuario}", "SK": "TOPES", "topes": dict(topes)})
+
+    def agregar_deuda(self, usuario: str, deuda: Deuda) -> None:
+        self._t.put_item(Item={
+            "PK": f"USER#{usuario}", "SK": f"DEUDA#{deuda.id or _nuevo_id()}", "nombre": deuda.nombre,
+            "saldo": deuda.saldo, "tasa_ea": str(deuda.tasa_ea), "cuota": deuda.cuota,
+        })
+
+    def eliminar_deuda(self, usuario: str, deuda_id: str) -> None:
+        self._t.delete_item(Key={"PK": f"USER#{usuario}", "SK": f"DEUDA#{deuda_id}"})
 
     # --- grupos ---
     def crear_grupo(self, nombre: str, creador: str, invitados: list[str]) -> str:

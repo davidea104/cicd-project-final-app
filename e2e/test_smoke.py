@@ -28,7 +28,7 @@ def test_health_y_version():
 def test_bienvenida_carga():
     r = Navegador().get("/bienvenida")
     assert r.status_code == 200
-    assert "Kuadra" in r.text and "Continuar con Google" in r.text
+    assert "Kuadra" in r.text and "Iniciar sesión con Google" in r.text
 
 
 def test_cabeceras_de_seguridad():

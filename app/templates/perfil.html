@@ -27,6 +27,8 @@
       <button class="boton azul" type="submit">Guardar nombre</button>
     </form>
     <br>
+    <a class="boton claro borde" href="{{ url_for('kuadra.finanzas') }}">Mis deudas y topes</a>
+    <br>
     <form method="post" action="{{ url_for('kuadra.salir') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button class="boton claro borde" type="submit">Cerrar sesión</button>

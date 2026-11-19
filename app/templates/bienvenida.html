@@ -13,9 +13,11 @@
       {% for cat, msg in mensajes %}<div class="aviso {{ cat }}">{{ msg }}</div>{% endfor %}
     {% endwith %}
     {% if google %}
-    <a class="boton claro" href="{{ url_for('kuadra.login_google') }}" id="login-google">Continuar con Google</a>
+    <a class="boton claro" href="{{ url_for('kuadra.login_google') }}" id="login-google">Iniciar sesión con Google</a>
+    <a class="boton fantasma" href="{{ url_for('kuadra.login_google') }}" id="registro-google">Crear cuenta con Google</a>
+    <p class="nota-bienvenida">¿Primera vez? Elige tu cuenta de Google y te pediremos tu nombre. Kuadra nunca ve tu contraseña.</p>
     {% else %}
-    <button class="boton claro" type="button" disabled title="Falta configurar Google">Continuar con Google</button>
+    <button class="boton claro" type="button" disabled title="Falta configurar Google">Iniciar sesión con Google</button>
     {% endif %}
     {% if modo_demo %}
     <form method="post" action="{{ url_for('kuadra.entrar_demo') }}">

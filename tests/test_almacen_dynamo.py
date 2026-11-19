@@ -51,7 +51,7 @@ def test_topes_y_deudas(alm):
     alm._t.put_item(Item={"PK": "USER#a@x.co", "SK": "DEUDA#1", "nombre": "Tarjeta", "saldo": 1000,
                           "tasa_ea": "28.6", "cuota": 100})
     assert alm.topes("a@x.co") == {"Mercado": 700000}
-    assert alm.deudas("a@x.co") == [Deuda("Tarjeta", 1000, 28.6, 100)]
+    assert [(x.nombre, x.saldo, x.tasa_ea, x.cuota) for x in alm.deudas("a@x.co")] == [("Tarjeta", 1000, 28.6, 100)]
 
 
 def test_grupos_compartidos(alm):
@@ -94,3 +94,13 @@ def test_pagos_y_foto(alm):
     assert alm.foto("manu@x.co") is None
     alm.guardar_foto("manu@x.co", b"\xff\xd8\xffdatos", "image/jpeg")
     assert alm.foto("manu@x.co") == (b"\xff\xd8\xffdatos", "image/jpeg")
+
+
+def test_deudas_y_topes_crud(alm):
+    alm.fijar_topes("a@x.co", {"Mercado": 500000})
+    assert alm.topes("a@x.co") == {"Mercado": 500000}
+    alm.agregar_deuda("a@x.co", Deuda("Tarjeta", 1000, 28.6, 100))
+    [deuda] = alm.deudas("a@x.co")
+    assert deuda.nombre == "Tarjeta" and deuda.tasa_ea == 28.6 and deuda.id
+    alm.eliminar_deuda("a@x.co", deuda.id)
+    assert alm.deudas("a@x.co") == []

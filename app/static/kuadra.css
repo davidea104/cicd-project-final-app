@@ -404,3 +404,4 @@ form.tarjeta { max-width: 640px; }
 @media (min-width: 900px) {
   #nuevo-grupo { display: inline-block; width: auto; padding: 14px 28px; margin-bottom: 18px; }
 }
+.nota-bienvenida { color: var(--bruma); font-size: .8rem; text-align: center; margin: 4px 0 0; }
